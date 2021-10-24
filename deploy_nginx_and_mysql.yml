@@ -1,0 +1,35 @@
+---
+- hosts: master
+  become: yes
+  become_user: ansible
+  tasks:
+    - name: Copy manifest files to master node.
+      copy:
+        src: ./nginx.yml
+        dest: ~/nginx.yml
+        owner: ansible
+
+
+    - name: Copy manifest files to master node.
+      copy:
+        src: ./mysql-pv.yaml
+        dest: ~/mysql-pv.yaml
+        owner: ansible
+
+
+    - name: Copy manifest files to master node.
+      copy:
+        src: ./mysql-deployment.yaml
+        dest: ~/mysql-deployment.yaml
+        owner: ansible
+
+
+    - name: Applying manifest files
+      shell: |
+        kubectl apply -f nginx.yml
+        sleep 60
+        kubectl apply -f mysql-pv.yaml
+        sleep 45
+        kubectl apply -f mysql-deployment.yaml
+
+  

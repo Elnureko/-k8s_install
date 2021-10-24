@@ -1,0 +1,129 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+
+   #- name: init k8s clean up
+    # shell: |
+     #  rm /root/.kube/config
+      # kubeadm reset -f
+     #ignore_errors: yes
+
+   - name: Turn off Firewalld
+     systemd: name=firewalld enabled=no
+
+   - name: Stop Firewalld
+     service: 
+       name: firewalld 
+       state: stopped
+
+   - name: Remove Old Kubernetes
+     yum:
+      name: "{{ item }}"
+      state: absent
+     loop:
+      - kubeadm
+      - kubelet
+      - kubectl
+      - kubernetes-cni
+
+   - name: Remove old Docker version
+     yum:
+       name: docker
+       state: absent
+
+   - name: AutoRemove old packages
+     yum:
+       autoremove: yes
+    
+   - name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
+     shell: |
+       swapoff -a
+
+   - name: Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)
+     replace:
+       path: /etc/fstab
+       regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+       replace: '# \1'
+
+   - name: Adding EpelRelease for Docker install
+     yum:
+       name: epel-release
+       state: latest
+
+   - name: install Docker
+     yum:
+       name: docker
+       state: present
+       update_cache: true
+
+   - name: Systemctl Daemon Reload
+     ansible.builtin.systemd:
+       daemon_reload: yes
+
+   - name: start Docker
+     service:
+       name: docker
+       state: started
+       enabled: yes
+
+   - name: disable SELinux
+     command: setenforce 0
+     ignore_errors: true
+
+   - name: disable SELinux on reboot
+     selinux:
+       state: disabled
+     ignore_errors: true
+
+   - name: ensure net.bridge.bridge-nf-call-ip6tables is set to 1
+     sysctl:
+      name: net.bridge.bridge-nf-call-ip6tables
+      value: 1
+      state: present
+
+   - name: ensure net.bridge.bridge-nf-call-iptables is set to 1
+     sysctl:
+      name: net.bridge.bridge-nf-call-iptables
+      value: 1
+      state: present
+
+   - name: add Kubernetes' YUM repository
+     yum_repository:
+      name: Kubernetes
+      description: Kubernetes YUM repository
+      baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+      gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+      gpgcheck: yes
+
+   - name: install kubelet
+     yum:
+        name: kubelet
+        state: present
+        update_cache: true
+
+   - name: install kubeadm
+     yum:
+        name: kubeadm
+        state: present
+
+   - name: Systemctl Daemon Reload
+     ansible.builtin.systemd:
+       daemon_reload: yes
+
+   - name: start kubelet
+     service:
+       name: kubelet
+       enabled: yes
+       state: started
+     ignore_errors: true
+
+- hosts: master
+  become: yes
+  tasks:
+   - name: install kubectl
+     yum:
+        name: kubectl
+        state: present
+        allow_downgrade: yes
+

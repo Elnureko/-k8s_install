@@ -1,0 +1,30 @@
+---
+- hosts: master
+  become: yes
+  become_user: ansible
+  tasks:
+    - name: initialize the cluster
+      shell: sudo kubeadm init --pod-network-cidr=192.168.0.0/24 > cluster_initialized.txt
+      args:
+        chdir: $HOME
+        creates: cluster_initialized.txt
+
+    - name: create .kube directory
+      file:
+        path: $HOME/.kube
+        state: directory
+        mode: 0755
+
+    - name: copy admin.conf to user's kube config
+      shell: |
+        sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown ansible:ansible $HOME/.kube/config
+      ignore_errors: true
+
+    - name: Pause 1 min
+      pause:
+        minutes: 1
+
+    - name: install Pod network
+      shell: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+

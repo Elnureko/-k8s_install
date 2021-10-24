@@ -1,0 +1,28 @@
+---
+- hosts: master
+  become: yes
+  become_method: sudo
+  become_user: ansible
+  gather_facts: false
+  tasks:
+    - name: get join command
+      shell: kubeadm token create --print-join-command
+      register: join_command_raw
+      ignore_errors: yes
+
+    - name: set join command
+      set_fact:
+        join_command: "{{ join_command_raw.stdout_lines[0] }}"
+      
+
+
+- hosts: workers
+  become: yes
+  become_user: root
+  tasks:
+    - name: join cluster
+      shell: "{{ hostvars['master'].join_command }} --ignore-preflight-errors all  > node_joined.txt"
+      args:
+        chdir: $HOME
+        creates: node_joined.txt
+

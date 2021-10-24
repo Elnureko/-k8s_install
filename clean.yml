@@ -1,0 +1,11 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+
+   - name: init k8s clean up
+     shell: |
+       rm /root/.kube/config
+       kubeadm reset -f
+     ignore_errors: yes
+

@@ -1,0 +1,25 @@
+---
+- hosts: master
+  become: yes
+  become_user: ansible
+  tasks:
+    - name: Copy manifest files to master node.
+      copy:
+        src: ./mysql.yml
+        dest: ~/mysql.yml
+        owner: ansible
+
+
+    - name: Copy manifest files to master node.
+      copy:
+        src: ./wordpress.yml
+        dest: ~/wordpress.yml
+        owner: ansible
+
+    - name: Applying manifest files
+      shell: |
+        kubectl create -f mysql.yml
+        sleep 60
+        kubectl create -f wordpress.yml
+
+  
